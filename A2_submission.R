@@ -32,3 +32,125 @@ dat_race = data.frame(race=c("black", "yes"), cases=c(127, 114), controls=c(1325
 anova(fm_race, test="Chisq") # zero residual deviance
 
 
+# Q2 ----------------------------------------------------------------------
+
+smoking_none = c(27, 12,23,7,394,142,421,94,18,13,24,4,48,25,55,13)
+smoking_some = c(2, 2, 4,1,32,19,38,11,1,1,0,3,6,4,15,4)
+smoking_count = c(smoking_none, smoking_some)
+age = c(1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2)
+age = as.factor(age)
+str(age)
+sex = c("Male","Male", "Female","Female","Male","Male", "Female","Female","Male","Male", "Female","Female","Male","Male", "Female","Female")
+sex = as.factor(sex)
+str(sex)
+race = c("Black","Black","Black","Black", "White","White","White","White","Black","Black","Black","Black", "White","White","White","White")
+race = as.factor(race)
+str(race)
+family = c("Both","Both","Both","Both","Both","Both","Both","Both","Both","Both","Both","Both","Mother","Mother","Mother","Mother")
+family = as.factor(family)
+str(family)
+
+smoking_indicator = c(rep("none",16), rep("some",16))
+smoking_indicator=as.factor(smoking_indicator)
+str(smoking_indicator)
+
+
+
+data_table = cbind(family=c(family,family),race=c(race,race), sex=c(sex,sex), age=c(age,age), smoking_indicator, smoking_count )
+data_table = as.data.frame(data_table)
+str(data_table)
+data_table$family = as.factor(data_table$family)
+data_table$race = as.factor(data_table$race)
+data_table$sex = as.factor(data_table$sex)
+data_table$age = as.factor(data_table$age)
+data_table$smoking_indicator = as.factor(data_table$smoking_indicator)
+
+fm = glm(smoking_count ~ (.)^4, data_table, family=poisson())
+summary(fm)
+
+data_set2 = read.csv("task2.csv", header=T)
+str(data_set2)
+
+fm = glm(Count ~ (.)^5, data_set2, family=poisson())
+summary(fm)
+
+
+
+# Q2a ---------------------------------------------------------------------
+
+# smoking and family as response, rest as explanatory variables
+# min model is (family, smoking, race:sex:age)
+
+drop1(fm, test="Chisq")
+fm = update(fm, .~. -Family:Race:Sex:Age:Smoking_I) # drop 5 way interaction (p-value 0.05644)
+ 
+drop1(fm, test="Chisq") # drop Family:Race:Sex:Age, p-value=0.7923
+fm = update(fm, .~. -Family:Race:Sex:Age)
+
+drop1(fm, test="Chisq") # drop Family:Race:Sex:Smoking_I, p-value 0.5966
+fm = update(fm, .~. -Family:Race:Sex:Smoking_I)
+
+drop1(fm, test="Chisq") # drop Family:Race:Sex, p-value 0.7459
+fm = update(fm, .~. -Family:Race:Sex)
+
+drop1(fm, test="Chisq") # drop ace:Sex:Age:Smoking_I, p-value 0.61798
+fm = update(fm, .~. -Race:Sex:Age:Smoking_I)
+
+drop1(fm, test="Chisq") # can't drop Race:Sex:Age, drop Race:Sex:Smoking_I, pva=0.57454
+fm = update(fm, .~. -Race:Sex:Smoking_I)
+
+drop1(fm, test="Chisq") # can't drop Race:Sex:Age, drop Family:Sex:Age:Smoking_I, pva=0.34809
+fm = update(fm, .~. -Family:Sex:Age:Smoking_I)
+
+drop1(fm, test="Chisq") # can't drop Race:Sex:Age, drop Sex:Age:Smoking_I , pva=0.81672
+fm = update(fm, .~. -Sex:Age:Smoking_I)
+
+drop1(fm, test="Chisq") # can't drop Race:Sex:Age, drop Family:Sex:Age  , pva=0.29404
+fm = update(fm, .~. -Family:Sex:Age)
+
+drop1(fm, test="Chisq") # can't drop Race:Sex:Age, drop Family:Sex:Smoking_I , pva=0.12656
+fm = update(fm, .~. -Family:Sex:Smoking_I)
+
+drop1(fm, test="Chisq") # can't drop Race:Sex:Age, drop Family:Sex , pva=0.46289
+fm = update(fm, .~. -Family:Sex)
+
+drop1(fm, test="Chisq") # can't drop Race:Sex:Age, drop Sex:Smoking_I, pva=0.1887
+fm = update(fm, .~. -Sex:Smoking_I)
+
+drop1(fm, test="Chisq") # can't drop Race:Sex:Age, drop Family:Race:Age:Smoking_I, pva=0.0847
+fm = update(fm, .~. -Family:Race:Age:Smoking_I)
+
+drop1(fm, test="Chisq") # can't drop Race:Sex:Age, drop Family:Age:Smoking_I, pva=0.95417
+fm = update(fm, .~. -Family:Age:Smoking_I)
+
+drop1(fm, test="Chisq") # can't drop Race:Sex:Age, drop Family:Race:Age , pva=0.8473
+fm = update(fm, .~. -Family:Race:Age )
+
+drop1(fm, test="Chisq") # can't drop Race:Sex:Age, drop Race:Age:Smoking_I , pva=0.2882
+fm = update(fm, .~. -Race:Age:Smoking_I )
+
+drop1(fm, test="Chisq") # can't drop Race:Sex:Age, drop Family:Age   , pva=0.26258
+fm = update(fm, .~. -Family:Age)
+
+drop1(fm, test="Chisq") # can't drop Race:Sex:Age, drop Family:Race:Smoking_I, pva=0.05113
+fm = update(fm, .~. -Family:Race:Smoking_I)
+
+drop1(fm, test="Chisq") # can't drop Race:Sex:Age, drop Race:Smoking_I, pva=0.450285
+fm = update(fm, .~. -Race:Smoking_I)
+
+drop1(fm, test="Chisq") # can't drop Race:Sex:Age, cant drop any more
+# Final model:  Count ~ Family + Race + Sex + Age + Smoking_I + Family:Race + 
+# Family:Smoking_I + Race:Sex + Race:Age + Sex:Age + Age:Smoking_I + Race:Sex:Age
+
+# state the conditional independence structure in the selected model
+
+# Q2b ---------------------------------------------------------------------
+
+# smoking as response, rest as explanatory variables
+# min model is (smoking, family:race:sex:age)
+
+
+# state the logit model equivalent to the selected loglinear model
+
+# zero cell in the contingency table?
+
