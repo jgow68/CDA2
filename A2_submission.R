@@ -71,8 +71,7 @@ summary(fm)
 data_set2 = read.csv("task2.csv", header=T)
 str(data_set2)
 
-fm = glm(Count ~ (.)^5, data_set2, family=poisson())
-summary(fm)
+
 
 
 
@@ -80,6 +79,9 @@ summary(fm)
 
 # smoking and family as response, rest as explanatory variables
 # min model is (family, smoking, race:sex:age)
+
+fm = glm(Count ~ (.)^5, data_set2, family=poisson())
+summary(fm)
 
 drop1(fm, test="Chisq")
 fm = update(fm, .~. -Family:Race:Sex:Age:Smoking_I) # drop 5 way interaction (p-value 0.05644)
@@ -149,6 +151,77 @@ drop1(fm, test="Chisq") # can't drop Race:Sex:Age, cant drop any more
 # smoking as response, rest as explanatory variables
 # min model is (smoking, family:race:sex:age)
 
+fm = glm(Count ~ (.)^5, data_set2, family=poisson())
+summary(fm)
+
+drop1(fm, test="Chisq")
+fm = update(fm, .~. -Family:Race:Sex:Age:Smoking_I) # drop 5 way interaction (p-value 0.05644)
+
+drop1(fm, test="Chisq") # cannot drop Family:Race:Sex:Age , drop Family:Race:Sex:Smoking_I, pval 0.6502
+fm = update(fm, .~. -Family:Race:Sex:Smoking_I)
+
+drop1(fm, test="Chisq") # cannot drop Family:Race:Sex:Age , drop Race:Sex:Age:Smoking_I, pval 0.64504
+fm = update(fm, .~. -Race:Sex:Age:Smoking_I)
+
+drop1(fm, test="Chisq") # cannot drop Family:Race:Sex:Age , drop Race:Sex:Smoking_I , pval 0.53462
+fm = update(fm, .~. -Race:Sex:Smoking_I )
+
+drop1(fm, test="Chisq") # cannot drop Family:Race:Sex:Age , drop Family:Sex:Age:Smoking_I , pval 0.36547
+fm = update(fm, .~. -Family:Sex:Age:Smoking_I)
+
+drop1(fm, test="Chisq") # cannot drop Family:Race:Sex:Age , drop Sex:Age:Smoking_I  , pval 0.79750
+fm = update(fm, .~. -Sex:Age:Smoking_I)
+
+drop1(fm, test="Chisq") # cannot drop Family:Race:Sex:Age , drop Family:Sex:Smoking_I, pval 0.10118
+fm = update(fm, .~. -Family:Sex:Smoking_I)
+
+drop1(fm, test="Chisq") # cannot drop Family:Race:Sex:Age , drop Sex:Smoking_I , pval 0.1994
+fm = update(fm, .~. -Sex:Smoking_I )
+
+drop1(fm, test="Chisq") # cannot drop Family:Race:Sex:Age , drop Family:Race:Age:Smoking_I, pval 0.0847
+fm = update(fm, .~. -Family:Race:Age:Smoking_I)
+
+drop1(fm, test="Chisq") # cannot drop Family:Race:Sex:Age , drop Family:Age:Smoking_I, pval 0.95417
+fm = update(fm, .~. -Family:Age:Smoking_I)
+
+drop1(fm, test="Chisq") # cannot drop Family:Race:Sex:Age , drop Race:Age:Smoking_I , pval 0.2845
+fm = update(fm, .~. -Race:Age:Smoking_I)
+
+drop1(fm, test="Chisq") # cannot drop Family:Race:Sex:Age , drop Family:Race:Smoking_I, pval 0.05025
+fm = update(fm, .~. -Family:Race:Smoking_I)
+
+drop1(fm, test="Chisq") # cannot drop Family:Race:Sex:Age , drop Race:Smoking_I , pval 0.46187
+fm = update(fm, .~. -Race:Smoking_I )
+
+drop1(fm, test="Chisq") # cannot drop Family:Race:Sex:Age , drop Age:Smoking_I , pval 0.05157
+fm = update(fm, .~. -Age:Smoking_I)
+
+drop1(fm, test="Chisq") # cannot drop Family:Race:Sex:Age , cant drop any other predictors
+summary(fm)
+
+pchisq(fm$deviance, fm$df.residual, lower.tail=F) # pval 0.079 reject H0, model is adequate
+
+# residuals test
+library(boot)
+fm.diag = glm.diag(fm)
+round(ftable(xtabs(fm.diag$rp ~ Family + Race + Sex + Age + Smoking_I, data=data_set2)),2)
+# overest smokers from mother family, black, female, age<13
+# underest smokers from mother family, black, female, age>13
+
+#  Count ~ Family + Race + Sex + Age + Smoking_I + Family:Race + 
+#  Family:Sex + Family:Age + Family:Smoking_I + Race:Sex + Race:Age + Sex:Age + Family:Race:Sex + 
+#  Family:Race:Age + Family:Sex:Age + Race:Sex:Age + Family:Race:Sex:Age
+
+tmp = xtabs(Count ~ Family + Race + Sex + Age + Smoking_I, data=data_set2)
+tmp
+ftable(tmp)
+
+
+Race_Smoking = apply(tmp, c("Race", "Smoking_I"), sum)
+
+library(vcd)
+Race_Smoking
+oddsratio(Race_Smoking, log=F) # odds of Black smoking is 0.9894 times the odds of WHite not smoking
 
 # state the logit model equivalent to the selected loglinear model
 
