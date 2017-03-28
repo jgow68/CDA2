@@ -32,3 +32,6 @@ dat_race = data.frame(race=c("black", "yes"), cases=c(127, 114), controls=c(1325
 anova(fm_race, test="Chisq") # zero residual deviance
 
 
+# Q2 ----------------------------------------------------------------------
+
+
