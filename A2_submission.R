@@ -3,7 +3,45 @@
 # Q1 ----------------------------------------------------------------------
 
 dat = data.frame(interview=c("no", "yes"), cases=c(195,46), controls=c(979,370))
-dat$interview
+dat = data.frame(med_status=c("no", "yes"), cases=c(979,195), controls=c(370,46)) # cases is non-participation
+dat
+
+# Q1 - use med status as predictor ----------------------------------------
+
+fm = glm(cbind(cases,controls) ~ med_status, family=binomial, data=dat)
+summary(fm) # med status coef is significant
+anova(fm, test="Chisq") # med status coef is significant, there is a relationship between participation and medical aid
+exp(coef(fm)[2]) # odds of non-participation from mothers having med status is 1.602 higher than non med-status
+
+# calculate CI of log odds, then transform back
+lor_CI = coef(fm)[2] + c(-1,1)*qnorm(0.975)*sqrt(diag(vcov(fm))[2])
+exp(lor_CI) # CI does not include 1, med-status is a risk factor for participation
+
+
+dat_white = data.frame(med_status=c("no", "yes"), cases=c(104,22), controls=c(10,2))
+dat_black = data.frame(med_status=c("no", "yes"), cases=c(91,957), controls=c(36,368))
+
+(fm_white = glm(cbind(cases,controls) ~ med_status, family=binomial, data=dat_white))
+(fm_black = glm(cbind(cases,controls) ~ med_status, family=binomial, data=dat_black))
+# both shows that med-status doesnt affect participation
+anova(fm_white, test="Chisq")
+anova(fm_black, test="Chisq")
+
+# participation may have higher dependence on black / white race instead on med_status
+dat_race = data.frame(race=c("black", "white"), cases=c(1048, 126), controls=c(404, 12))
+(fm_race = glm(cbind(cases,controls) ~ race, family=binomial, data=dat_race))
+anova(fm_race, test="Chisq") # zero residual deviance, coef race is significant
+
+dat_race_nomed = data.frame(race=c("black", "white"), cases=c(957, 22), controls=c(368, 22))
+(fm_race_nomed = glm(cbind(cases,controls) ~ race, family=binomial, data=dat_race_nomed))
+anova(fm_race_nomed, test="Chisq")
+
+dat_race_med = data.frame(race=c("black", "white"), cases=c(91, 104), controls=c(36, 10))
+(fm_race_med = glm(cbind(cases,controls) ~ race, family=binomial, data=dat_race_med))
+anova(fm_race_med, test="Chisq")
+
+
+# Q1 - initial use interview as predictor ---------------------------------
 
 fm = glm(cbind(cases,controls) ~ interview, family=binomial, data=dat)
 summary(fm) # interview coef is significant
@@ -34,12 +72,8 @@ anova(fm_race, test="Chisq") # zero residual deviance
 
 # Q2 ----------------------------------------------------------------------
 
-data_set2 = read.csv("task2.csv", header=T)
+data_set2 = read.csv("task2.csv", header=T) #show the tas2.csv layout
 str(data_set2)
-
-
-
-
 
 # Q2a ---------------------------------------------------------------------
 
@@ -175,6 +209,8 @@ fm.diag = glm.diag(fm)
 round(ftable(xtabs(fm.diag$rp ~ Family + Race + Sex + Age + Smoking_I, data=data_set2)),2)
 # overest smokers from mother family, black, female, age<13
 # underest smokers from mother family, black, female, age>13
+cbind(data_set2$Count,fitted(fm)) # check the fitted values against data
+
 
 #  Count ~ Family + Race + Sex + Age + Smoking_I + Family:Race + 
 #  Family:Sex + Family:Age + Family:Smoking_I + Race:Sex + Race:Age + Sex:Age + Family:Race:Sex + 
@@ -206,18 +242,17 @@ confint(or_age_smoking) # CI do not incl. 1
 
 # state the logit model equivalent to the selected loglinear model
 # prepare the logit data set
-dat.logit = cbind(expand.grid(F=levels(data_set2$Family), R=levels(data_set2$Race), S=levels(data_set2$Sex), A=levels(data_set2$Age)),
-            SN=data_set2$Count[data_set2$Smoking_I=="none"], SS=data_set2$Count[data_set2$Smoking_I=="some"])
 
-fm.logit = glm(cbind(SN, SS) ~ ., dat.logit, family=binomial)
+dat.logit = cbind(expand.grid(A=levels(data_set2$Age), S=levels(data_set2$Sex),# need to relevel Sex, default set Female as first level
+                              R=levels(data_set2$Race), F=levels(data_set2$Family)), 
+                  SN=data_set2$Count[data_set2$Smoking_I=="none"], SS=data_set2$Count[data_set2$Smoking_I=="some"])
+data_set2$Sex = relevel(data_set2$Sex, "Male")
+dat.logit
+
+fm.logit = glm(cbind(SN, SS) ~ F+R+S+A, dat.logit, family=binomial)
 fm.logit$deviance; fm$deviance
 
-summary(fm.logit) # much simpler model than log linear
-summary(fm)
+summary(fm.logit)$call;summary(fm)$call # logit much simpler than log linear
 
-update(fm.logit, .~. -A, dat.logit ) # can't fit to match deviance
+update(fm.logit, .~. -A-R-S, dat.logit )$deviance; fm$deviance # matched log linear deviance
 
-
-# zero cell in the contingency table? only zero in the tmp is the male, <12 yrs, some smoking, mother family, black
-fit_check = cbind(c(dat.logit$SN, dat.logit$SS), fitted(fm))
-(fit_check[,1] - fit_check[,2])^2
